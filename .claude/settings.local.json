@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"client\\(5173\\)=%{http_code}\\\\n\" http://localhost:5173)",
+      "Bash(curl -s http://localhost:5174/api/data/links)",
+      "Bash(curl -s -o /dev/null -w \"\\\\nserver\\(5174\\)=%{http_code}\\\\n\" http://localhost:5174/api/data/links)",
+      "Bash(curl *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(echo \" exit=$?\")"
+    ]
+  }
+}

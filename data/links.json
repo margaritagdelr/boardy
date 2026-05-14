@@ -1,0 +1,73 @@
+{
+  "groups": [
+    {
+      "id": "thinfinity-stores",
+      "title": "Thinfinity en Stores",
+      "color": "brand",
+      "links": [
+        {
+          "id": "thinfinity-appstore",
+          "label": "Thinfinity en App Store",
+          "url": "https://apps.apple.com/",
+          "note": "Revisar look & feel — ver pendiente"
+        },
+        {
+          "id": "thinfinity-playstore",
+          "label": "Thinfinity en Google Play",
+          "url": "https://play.google.com/store",
+          "note": "Revisar look & feel — ver pendiente"
+        }
+      ]
+    },
+    {
+      "id": "cybele-web",
+      "title": "Sitios Cybele / Thinfinity",
+      "color": "brand",
+      "links": [
+        {
+          "id": "cybelesoft",
+          "label": "cybelesoft.com",
+          "url": "https://www.cybelesoft.com",
+          "note": ""
+        },
+        {
+          "id": "thinfinity-com",
+          "label": "thinfinity.com",
+          "url": "https://www.thinfinity.com",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "herramientas",
+      "title": "Atajos diarios",
+      "color": "slate",
+      "links": [
+        {
+          "id": "github",
+          "label": "GitHub",
+          "url": "https://github.com",
+          "note": ""
+        },
+        {
+          "id": "figma",
+          "label": "Figma",
+          "url": "https://www.figma.com",
+          "note": ""
+        },
+        {
+          "id": "analytics",
+          "label": "Google Analytics",
+          "url": "https://analytics.google.com",
+          "note": ""
+        },
+        {
+          "id": "search-console",
+          "label": "Google Search Console",
+          "url": "https://search.google.com/search-console",
+          "note": ""
+        }
+      ]
+    }
+  ]
+}

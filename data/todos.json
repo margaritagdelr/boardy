@@ -1,0 +1,31 @@
+{
+  "todos": [
+    {
+      "id": "todo-stores-thinfinity",
+      "title": "Arreglar listings de Thinfinity en App Store y Google Play",
+      "priority": "alta",
+      "status": "pendiente",
+      "tags": [
+        "web",
+        "marca",
+        "stores"
+      ],
+      "notes": "Las capturas, descripción y metadata se ven descuidadas. Pedidos hoy por el jefe. Coordinar con quien suba builds para refrescar assets y copy.",
+      "createdAt": "2026-05-14",
+      "dueDate": ""
+    },
+    {
+      "id": "todo-redes-inventario",
+      "title": "Completar inventario de redes sociales de Cybele/Thinfinity",
+      "priority": "media",
+      "status": "pendiente",
+      "tags": [
+        "redes",
+        "inventario"
+      ],
+      "notes": "Confirmar qué cuentas existen, accesos, responsables y estado de cada una.",
+      "createdAt": "2026-05-14",
+      "dueDate": ""
+    }
+  ]
+}

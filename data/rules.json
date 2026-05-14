@@ -1,0 +1,182 @@
+{
+  "rules": [
+    {
+      "id": "rule-urgent",
+      "label": "urgente",
+      "color": "terracota",
+      "enabled": true,
+      "matchAny": [
+        "S.O.S",
+        "SOS",
+        "sos",
+        "urgente",
+        "asap",
+        "ya mismo",
+        "cuanto antes",
+        "lo antes posible",
+        "es importante",
+        "priority",
+        "es prioridad"
+      ]
+    },
+    {
+      "id": "rule-task",
+      "label": "nueva tarea",
+      "color": "ochre",
+      "enabled": true,
+      "matchAny": [
+        "necesito que",
+        "necesitamos",
+        "podés",
+        "podes",
+        "podrías",
+        "podrias",
+        "hay que",
+        "habría que",
+        "habria que",
+        "tenés que",
+        "tenes que",
+        "me ayudás",
+        "me ayudas",
+        "pedido",
+        "me podés",
+        "me podes",
+        "hacé",
+        "hace"
+      ]
+    },
+    {
+      "id": "rule-question",
+      "label": "pregunta",
+      "color": "sage",
+      "enabled": true,
+      "matchAny": [
+        "sabés",
+        "sabes",
+        "alguien sabe",
+        "cómo hago",
+        "como hago",
+        "qué hago",
+        "que hago",
+        "duda",
+        "consulta",
+        "¿",
+        "sabrías",
+        "sabrias"
+      ]
+    },
+    {
+      "id": "rule-bug",
+      "label": "problema",
+      "color": "terracota",
+      "enabled": true,
+      "matchAny": [
+        "problema",
+        "no anda",
+        "no funciona",
+        "se rompió",
+        "se rompio",
+        "error",
+        "bug",
+        "roto",
+        "falla",
+        "no carga",
+        "caído",
+        "caido",
+        "se cayó",
+        "se cayo"
+      ]
+    },
+    {
+      "id": "rule-deadline",
+      "label": "deadline",
+      "color": "ochre",
+      "enabled": true,
+      "matchAny": [
+        "para el",
+        "antes del",
+        "vence",
+        "deadline",
+        "fecha límite",
+        "fecha limite",
+        "plazo"
+      ]
+    },
+    {
+      "id": "rule-review",
+      "label": "revisar",
+      "color": "sage",
+      "enabled": true,
+      "matchAny": [
+        "revisás",
+        "revisas",
+        "revisar",
+        "aprobás",
+        "aprobas",
+        "aprobar",
+        "qué opinás",
+        "que opinas",
+        "tu opinión",
+        "tu opinion",
+        "qué te parece",
+        "que te parece",
+        "feedback"
+      ]
+    },
+    {
+      "id": "rule-stores",
+      "label": "stores",
+      "color": "sage",
+      "enabled": true,
+      "matchAny": [
+        "app store",
+        "play store",
+        "google play",
+        "apple store",
+        "listing"
+      ]
+    },
+    {
+      "id": "rule-design",
+      "label": "diseño",
+      "color": "sage",
+      "enabled": true,
+      "matchAny": [
+        "figma",
+        "diseño",
+        "diseno",
+        "mockup",
+        "prototipo",
+        "wireframe"
+      ]
+    },
+    {
+      "id": "rule-meeting",
+      "label": "reunión",
+      "color": "sage",
+      "enabled": true,
+      "matchAny": [
+        "reunión",
+        "reunion",
+        "meet",
+        "agenda",
+        "zoom",
+        "llamada",
+        "call"
+      ]
+    },
+    {
+      "id": "rule-mentioned",
+      "label": "me mencionan",
+      "color": "terracota",
+      "enabled": true,
+      "matchAny": [
+        "@margarita",
+        "margarita",
+        "mar,",
+        "margui",
+        "mga"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "accounts": [
+    {
+      "id": "acc-linkedin-cybele",
+      "platform": "LinkedIn",
+      "category": "Redes sociales",
+      "brand": "Cybele",
+      "url": "https://www.linkedin.com/company/cybele-software/",
+      "owner": "Margarita",
+      "status": "activa",
+      "lastReview": "",
+      "notes": ""
+    },
+    {
+      "id": "acc-x-thinfinity",
+      "platform": "X (Twitter)",
+      "category": "Redes sociales",
+      "brand": "Thinfinity",
+      "url": "",
+      "owner": "Margarita",
+      "status": "revisar",
+      "lastReview": "",
+      "notes": ""
+    },
+    {
+      "id": "acc-youtube-thinfinity",
+      "platform": "YouTube",
+      "category": "Redes sociales",
+      "brand": "Thinfinity",
+      "url": "",
+      "owner": "Margarita",
+      "status": "revisar",
+      "lastReview": "",
+      "notes": ""
+    },
+    {
+      "id": "acc-appstore-thinfinity",
+      "platform": "Apple App Store",
+      "category": "Stores",
+      "brand": "Thinfinity",
+      "url": "",
+      "owner": "Margarita",
+      "status": "necesita-trabajo",
+      "lastReview": "",
+      "notes": "Listing actual se ve descuidado. Ver pendiente para mejorar capturas, descripción y metadata."
+    },
+    {
+      "id": "acc-playstore-thinfinity",
+      "platform": "Google Play",
+      "category": "Stores",
+      "brand": "Thinfinity",
+      "url": "",
+      "owner": "Margarita",
+      "status": "necesita-trabajo",
+      "lastReview": "",
+      "notes": "Listing actual se ve descuidado. Ver pendiente para mejorar capturas, descripción y metadata."
+    }
+  ]
+}

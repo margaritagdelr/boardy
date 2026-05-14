@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-cream text-ink antialiased;
+  font-family: 'Inter Tight', Inter, system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { @apply bg-cream; }
+::-webkit-scrollbar-thumb { @apply bg-ink-mute rounded; }
+::-webkit-scrollbar-thumb:hover { @apply bg-ink/20; }
+
+@layer components {
+  .input {
+    @apply w-full px-3 py-2 rounded-md border border-ink-mute bg-paper text-sm text-ink
+           focus:outline-none focus:ring-2 focus:ring-terracota-200 focus:border-terracota-400
+           placeholder:text-ink-soft;
+  }
+  .textarea {
+    @apply w-full px-3 py-2 rounded-md border border-ink-mute bg-paper text-sm text-ink
+           focus:outline-none focus:ring-2 focus:ring-terracota-200 focus:border-terracota-400
+           min-h-[80px] resize-y placeholder:text-ink-soft;
+  }
+  .select {
+    @apply w-full px-3 py-2 rounded-md border border-ink-mute bg-paper text-sm text-ink
+           focus:outline-none focus:ring-2 focus:ring-terracota-200 focus:border-terracota-400;
+  }
+  .btn-primary {
+    @apply px-3 py-2 rounded-md bg-ink hover:bg-ink/90 text-paper text-sm font-medium
+           transition-colors;
+  }
+  .btn-accent {
+    @apply px-3 py-2 rounded-md bg-terracota hover:bg-terracota-600 text-ink text-sm font-semibold
+           transition-colors;
+  }
+  .btn-secondary {
+    @apply px-3 py-2 rounded-md bg-paper hover:bg-sage-50 border border-ink-mute text-ink text-sm font-medium
+           transition-colors;
+  }
+  .pill {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium tracking-wide;
+  }
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+    letter-spacing: 0.06em;
+  }
+}

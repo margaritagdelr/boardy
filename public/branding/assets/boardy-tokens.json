@@ -1,0 +1,154 @@
+{
+  "$schema": "boardy-design-tokens-v1",
+  "brand": {
+    "name": "Boardy",
+    "wordmark": "B●ardy",
+    "tagline": "Tu memoria de trabajo",
+    "description": "Memory helper app — pending messages, tasks, daily links, monitored platforms."
+  },
+  "color": {
+    "ink": {
+      "value": "#1A1916",
+      "role": "Primary text, brand mark background, navbar on dark theme",
+      "oklch": "oklch(0.18 0.005 60)"
+    },
+    "terracota": {
+      "value": "#D97757",
+      "role": "Brand accent — the dot. Active items, completed checks, primary buttons, links, focus rings.",
+      "oklch": "oklch(0.7 0.13 45)"
+    },
+    "cream": {
+      "value": "#F1ECE1",
+      "role": "Primary background (warm). Use as page background on light theme.",
+      "oklch": "oklch(0.94 0.012 80)"
+    },
+    "paper": {
+      "value": "#F6F5F0",
+      "role": "Surface — cards, sheets, modals on light theme. Subtler than cream.",
+      "oklch": "oklch(0.96 0.005 80)"
+    },
+    "sage": {
+      "value": "#D8DFD1",
+      "role": "Secondary background — soft sections, empty states, avatars placeholder.",
+      "oklch": "oklch(0.88 0.015 130)"
+    },
+    "ink-soft": {
+      "value": "rgba(26, 25, 22, 0.55)",
+      "role": "Secondary text on light backgrounds."
+    },
+    "ink-mute": {
+      "value": "rgba(26, 25, 22, 0.08)",
+      "role": "Borders, dividers on light backgrounds."
+    },
+    "paper-soft": {
+      "value": "rgba(246, 245, 240, 0.55)",
+      "role": "Secondary text on dark backgrounds."
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "primary": "'Inter Tight', system-ui, -apple-system, sans-serif",
+      "mono": "'JetBrains Mono', ui-monospace, 'SF Mono', monospace"
+    },
+    "googleFonts": "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap",
+    "weight": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "black": 800
+    },
+    "wordmark": {
+      "family": "Inter Tight",
+      "weight": 800,
+      "letterSpacing": "-0.045em",
+      "lineHeight": "0.95"
+    },
+    "scale": {
+      "display":  { "size": "48px", "weight": 700, "lineHeight": "1.05", "letterSpacing": "-0.03em" },
+      "h1":       { "size": "32px", "weight": 700, "lineHeight": "1.1",  "letterSpacing": "-0.025em" },
+      "h2":       { "size": "24px", "weight": 600, "lineHeight": "1.2",  "letterSpacing": "-0.02em" },
+      "h3":       { "size": "18px", "weight": 600, "lineHeight": "1.3" },
+      "body":     { "size": "14px", "weight": 400, "lineHeight": "1.55" },
+      "body-lg":  { "size": "16px", "weight": 400, "lineHeight": "1.55" },
+      "small":    { "size": "12px", "weight": 500, "lineHeight": "1.4" },
+      "mono":     { "size": "11px", "weight": 500, "lineHeight": "1.4", "letterSpacing": "0.06em", "family": "mono" }
+    }
+  },
+  "radius": {
+    "sm": "6px",
+    "md": "10px",
+    "lg": "16px",
+    "xl": "22px",
+    "pill": "999px",
+    "brand-mark": "18%"
+  },
+  "shadow": {
+    "sm": "0 4px 12px -8px rgba(0, 0, 0, 0.2)",
+    "md": "0 12px 32px -18px rgba(0, 0, 0, 0.3)",
+    "lg": "0 24px 60px -34px rgba(0, 0, 0, 0.4)"
+  },
+  "spacing": {
+    "0":  "0",
+    "1":  "4px",
+    "2":  "8px",
+    "3":  "12px",
+    "4":  "16px",
+    "5":  "24px",
+    "6":  "32px",
+    "7":  "48px",
+    "8":  "64px",
+    "9":  "96px"
+  },
+  "logo": {
+    "files": {
+      "mark": "boardy-mark.svg",
+      "lockup-horizontal": "boardy-logo.svg",
+      "favicon": "boardy-favicon.ico"
+    },
+    "mark": {
+      "viewBox": "0 0 100 100",
+      "background": "ink",
+      "cornerRadius": "18% of size",
+      "dot": {
+        "color": "terracota",
+        "size": "15.5% of mark size",
+        "position": { "top": "14%", "left": "14%" }
+      },
+      "rows": {
+        "count": 3,
+        "color": "paper",
+        "minSizeForAllRows": "48px (below this, use minimal variant: dot + headline only)"
+      }
+    },
+    "wordmark": {
+      "structure": "B + terracota-circle + ardy",
+      "dotSizeRatio": "0.6 × font-size",
+      "dotVerticalOffset": "−0.04em (slight lift to optical center)",
+      "dotHorizontalKern": "−0.02em on each side"
+    },
+    "lockup": {
+      "horizontal": {
+        "gap": "30% of mark height",
+        "alignment": "centers vertically aligned"
+      },
+      "vertical": {
+        "gap": "16% of mark height"
+      },
+      "minClearSpace": "10% of mark height on all sides"
+    },
+    "color-modes": {
+      "default": { "background": "cream", "mark": "ink + paper rows + terracota dot", "wordmark": "ink + terracota dot" },
+      "dark":    { "background": "ink",   "mark": "paper + ink rows + terracota dot", "wordmark": "paper + terracota dot" },
+      "accent":  { "background": "terracota OR #FBE9D7", "mark": "ink", "wordmark": "ink" }
+    }
+  },
+  "component-hints": {
+    "button-primary": { "bg": "ink", "fg": "paper", "radius": "md", "padding": "12px 20px" },
+    "button-accent":  { "bg": "terracota", "fg": "ink", "radius": "md", "padding": "12px 20px" },
+    "card":           { "bg": "paper", "border": "ink-mute", "radius": "lg", "shadow": "md" },
+    "row-item":       { "bg": "cream", "radius": "md", "padding": "12px 14px" },
+    "check-done":     { "fill": "terracota", "size": "18px", "radius": "pill" },
+    "tag":            { "family": "mono", "size": "10px", "letterSpacing": "0.06em", "color": "ink-soft" }
+  }
+}

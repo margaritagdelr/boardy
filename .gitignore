@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+*.log
+.env
+.env.local
+.vite
+
+# Secrets — NEVER commit
+.boardy-secrets/
+
+# Local-only inbox state (Google Chat messages — privadas)
+data/inbox.json
+
