@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, ExternalLink, Pencil, Trash2, X, Inbox as InboxIcon, ListTodo, Users as UsersIcon, AlertTriangle } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2, X, Inbox as InboxIcon, ListTodo, Users as UsersIcon, AlertTriangle, Sparkles, RefreshCw } from 'lucide-react';
 import { loadData, saveData, newId } from '../api';
 import type { LinksData, LinkGroup, LinkItem, TodosData, AccountsData, InboxState } from '../types';
 import PageHeader from '../components/PageHeader';
@@ -16,6 +16,22 @@ type Summary = {
   accountsAtencion: number;
 };
 
+type Briefing = {
+  date: string;
+  text: string;
+  generatedAt: string;
+  stats: {
+    pendientes: number;
+    enCurso: number;
+    alta: number;
+    vencidos: number;
+    venceHoy: number;
+    venceProximo: number;
+    nuevosInbox: number;
+    cuentasAtencion: number;
+  };
+};
+
 export default function Dashboard({
   onNavigate,
   inboxCount,
@@ -25,12 +41,31 @@ export default function Dashboard({
 } = {}) {
   const [data, setData] = useState<LinksData | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
   const [editing, setEditing] = useState<{ groupId: string; link?: LinkItem } | null>(null);
   const [editingGroup, setEditingGroup] = useState<LinkGroup | null>(null);
 
   useEffect(() => {
     loadData('links').then(setData).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    fetch('/api/briefing')
+      .then(r => (r.ok ? (r.json() as Promise<Briefing>) : null))
+      .then(setBriefing)
+      .catch(() => setBriefing(null));
+  }, []);
+
+  async function regenerateBriefing() {
+    setBriefingLoading(true);
+    try {
+      const r = await fetch('/api/briefing/regenerate', { method: 'POST' });
+      if (r.ok) setBriefing((await r.json()) as Briefing);
+    } finally {
+      setBriefingLoading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +152,29 @@ export default function Dashboard({
           </button>
         }
       />
+
+      {briefing && (
+        <section className="mb-4 bg-cream border border-ochre-700/20 rounded-lg p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <Sparkles size={18} className="text-ochre-700 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-xs font-semibold text-ochre-700 uppercase tracking-wide">Briefing del día</span>
+                <button
+                  onClick={regenerateBriefing}
+                  disabled={briefingLoading}
+                  className="text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md bg-iris-50 text-iris-700 hover:bg-iris-100 disabled:opacity-50 transition-colors"
+                  title="Regenerar"
+                >
+                  <RefreshCw size={11} className={briefingLoading ? 'animate-spin' : ''} />
+                  {briefingLoading ? 'Pensando…' : 'Regenerar'}
+                </button>
+              </div>
+              <p className="text-sm text-ink/85 leading-relaxed whitespace-pre-wrap">{briefing.text}</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {summary && (
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">

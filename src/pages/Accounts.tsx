@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, ExternalLink, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2, Search, ListTodo } from 'lucide-react';
 import { loadData, saveData, newId } from '../api';
-import type { Account, AccountsData } from '../types';
+import type { Account, AccountsData, Todo } from '../types';
 import PageHeader from '../components/PageHeader';
 import { Modal, Field } from './Dashboard';
 
@@ -21,13 +21,24 @@ const STATUS_LABEL: Record<Account['status'], string> = {
 
 export default function Accounts() {
   const [data, setData] = useState<AccountsData | null>(null);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [editing, setEditing] = useState<Account | null>(null);
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('todas');
 
   useEffect(() => {
     loadData('accounts').then(setData).catch(console.error);
+    loadData('todos').then(d => setTodos(d.todos)).catch(console.error);
   }, []);
+
+  const todosByAccount = useMemo(() => {
+    const map: Record<string, Todo[]> = {};
+    for (const t of todos) {
+      if (!t.accountId || t.status === 'hecho') continue;
+      (map[t.accountId] ??= []).push(t);
+    }
+    return map;
+  }, [todos]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -145,7 +156,18 @@ export default function Accounts() {
                 <td className="px-4 py-3">
                   <span className={`pill ${STATUS_STYLES[a.status]}`}>{STATUS_LABEL[a.status]}</span>
                 </td>
-                <td className="px-4 py-3 text-ink-soft max-w-xs truncate" title={a.notes}>{a.notes}</td>
+                <td className="px-4 py-3 text-ink-soft max-w-xs">
+                  {todosByAccount[a.id]?.length > 0 && (
+                    <div
+                      className="inline-flex items-center gap-1 text-xs text-terracota-700 mb-1"
+                      title={todosByAccount[a.id].map(t => `• ${t.title}`).join('\n')}
+                    >
+                      <ListTodo size={11} />
+                      {todosByAccount[a.id].length} pendiente{todosByAccount[a.id].length === 1 ? '' : 's'}
+                    </div>
+                  )}
+                  <div className="truncate" title={a.notes}>{a.notes}</div>
+                </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   <button onClick={() => setEditing(a)} className="p-1.5 rounded hover:bg-sage-100 text-ink/50 opacity-0 group-hover:opacity-100">
                     <Pencil size={14} />

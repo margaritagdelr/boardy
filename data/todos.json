@@ -26,6 +26,101 @@
       "notes": "Confirmar qué cuentas existen, accesos, responsables y estado de cada una.",
       "createdAt": "2026-05-14",
       "dueDate": ""
+    },
+    {
+      "id": "todo-mo0148j",
+      "title": "¿Vos me podés contar cuántos usuarios ya están usando los manuales?",
+      "priority": "media",
+      "status": "pendiente",
+      "tags": [
+        "chat",
+        "auto"
+      ],
+      "notes": "Conversación en Daniel Vazquez:\n\n— Resumen —\nDaniel te pidió un número de cuántos usuarios están usando los manuales. Lo necesita para evaluar si vuela los PDFs viejos y para cerrar lo de los LLMs, que es clave para el search.\n\n— Contexto previo —\n[Daniel Vazquez, 09:40] A la noche tuve facu, así que el día de fiaca no fue completo. Pero me hacía mucha falta. Y me quedé corto.\n[Vos, 09:41] buenisiiimo\n[Vos, 09:41] super necesarios esos dias de fiaca!\n[Daniel Vazquez, 09:44] Voy a necesitar avanzar con más temas del manual. Lo de los componentes web lo encaré, algo conseguí pero me parece que le queda pulido. Si eso atrasa lo que necesitás hacer armalo como quieras y luego vemos cómo lo enlazamos (se linkea o s…\n[Daniel Vazquez, 09:44] Lo que quiero cerrar sí o sí es lo de LLMs porque de eso depende el search.\n\n— Mensajes —\n[Daniel Vazquez, 09:45] ¿Vos me podés contar cuántos usuarios ya están usando los manuales?",
+      "createdAt": "2026-05-14",
+      "dueDate": "",
+      "sourceInboxIds": [
+        "spaces/5gtAXkAAAAE/messages/eoVRJsisb7o.eoVRJsisb7o"
+      ]
+    },
+    {
+      "id": "todo-0hi0i8c",
+      "title": "hay que pensar un toque como lo diseñamos (+1)",
+      "priority": "media",
+      "status": "pendiente",
+      "tags": [
+        "chat",
+        "auto"
+      ],
+      "notes": "Conversación en Leonardo Laurencio:\n\n— Resumen —\nLeo te pasó el link a una presentación y te pidió que pienses cómo diseñar el slide y el wording.\n\n— Contexto previo —\n[Leonardo Laurencio, 09:40] y asi lo tocas\n[Leonardo Laurencio, 09:40] vos directamente\n[Vos, 09:40] dale\n[Vos, 09:40] de uan\n[Leonardo Laurencio, 09:44] https://docs.google.com/presentation/d/1bcqMO9SjPmJjrpLoMMCYACqYa4rRqu51OkbOrLQBxC4/edit?slide=id.p#slide=id.p\n\n— Mensajes —\n[Leonardo Laurencio, 09:44] hay que pensar un toque como lo diseñamos\n[Leonardo Laurencio, 11:56] hay que pensar bien el wording",
+      "createdAt": "2026-05-14",
+      "dueDate": "",
+      "sourceInboxIds": [
+        "spaces/nKAcMUAAAAE/messages/HgPEE7KODqs.HgPEE7KODqs",
+        "spaces/nKAcMUAAAAE/messages/QorZDp7Gtkg.QorZDp7Gtkg"
+      ]
+    },
+    {
+      "id": "todo-ah6oi2t",
+      "title": "cambiar link manual fslogix",
+      "priority": "media",
+      "status": "pendiente",
+      "tags": [],
+      "notes": "https://blog.cybelesoft.com/fslogix-deep-dive-configuration-best-practices/",
+      "createdAt": "2026-05-15",
+      "dueDate": ""
+    },
+    {
+      "id": "todo-lrvhyho",
+      "title": "pero para mi para que sea mejora hay que entender para que lo hacemos",
+      "priority": "media",
+      "status": "pendiente",
+      "tags": [
+        "chat",
+        "auto"
+      ],
+      "notes": "Conversación en Leonardo Laurencio:\n\n— Contexto previo —\n[Leonardo Laurencio, 11:59] con el proceso como esta\n[Vos, 11:59] no nos va a frfenar en otras cosas\n[Vos, 11:59] asique no lo veo como un tema\n[Vos, 11:59] no?\n[Leonardo Laurencio, 11:59] claro\n\n— Mensajes —\n[Leonardo Laurencio, 11:59] pero para mi para que sea mejora hay que entender para que lo hacemos",
+      "createdAt": "2026-05-15",
+      "dueDate": "",
+      "sourceInboxIds": [
+        "spaces/nKAcMUAAAAE/messages/EEMgzo2dqg4.EEMgzo2dqg4"
+      ]
+    },
+    {
+      "id": "todo-ygw0fl3",
+      "title": "seguramente han hecha buttlercard, podrias decirme donde los puedo buscar",
+      "priority": "media",
+      "status": "pendiente",
+      "tags": [
+        "chat",
+        "auto"
+      ],
+      "notes": "Conversación en Barbara Quevedo:\n\n— Contexto previo —\n[Barbara Quevedo, 18:02] Hola! Estoy en el avión que recién aterrizó, dame un ratito que le pregunto a Nestor porque tenía que pasarme unas medidas\n[Vos, 18:05] ok\n[Vos, 18:05] gracias!\n[Barbara Quevedo, 18:05] A vos !\n[Barbara Quevedo, 12:51] buenas, consulta\n\n— Mensajes —\n[Barbara Quevedo, 12:51] seguramente han hecha buttlercard, podrias decirme donde los puedo buscar",
+      "createdAt": "2026-05-15",
+      "dueDate": "",
+      "sourceInboxIds": [
+        "spaces/6LZMpCAAAAE/messages/eXpw42hHJkA.eXpw42hHJkA"
+      ]
+    },
+    {
+      "id": "todo-fl3gcn8",
+      "title": "Linkedin",
+      "priority": "media",
+      "status": "pendiente",
+      "tags": [],
+      "notes": "Hay que actualizar los productos",
+      "createdAt": "2026-05-15",
+      "dueDate": "2026-05-22"
+    },
+    {
+      "id": "todo-ha6qvnt",
+      "title": "Seguir con CCC-70",
+      "priority": "media",
+      "status": "pendiente",
+      "tags": [],
+      "notes": "",
+      "createdAt": "2026-05-15",
+      "dueDate": ""
     }
   ]
 }

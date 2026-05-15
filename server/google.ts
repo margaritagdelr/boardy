@@ -314,6 +314,15 @@ export async function resolveUserNames(userResourceNames: string[]): Promise<Rec
   return out;
 }
 
+export type ChatAttachment = {
+  contentName?: string;
+  contentType?: string;
+  driveFileId?: string;
+  downloadUri?: string;
+  thumbnailUri?: string;
+  source?: string;
+};
+
 export type ChatMessage = {
   id: string; // full resource name: spaces/XXX/messages/YYY
   spaceName: string;
@@ -324,10 +333,114 @@ export type ChatMessage = {
   createTime: string;
   threadName?: string;
   webUri?: string;
+  attachments?: ChatAttachment[];
 };
+
+function extractAttachments(raw: unknown): ChatAttachment[] | undefined {
+  const arr = (raw as { attachment?: unknown[] })?.attachment;
+  if (!Array.isArray(arr) || arr.length === 0) return undefined;
+  const out: ChatAttachment[] = [];
+  for (const a of arr) {
+    const x = a as Record<string, unknown>;
+    const driveRef = x.driveDataRef as { driveFileId?: string } | undefined;
+    out.push({
+      contentName: typeof x.contentName === 'string' ? x.contentName : undefined,
+      contentType: typeof x.contentType === 'string' ? x.contentType : undefined,
+      driveFileId: driveRef?.driveFileId,
+      downloadUri: typeof x.downloadUri === 'string' ? x.downloadUri : undefined,
+      thumbnailUri: typeof x.thumbnailUri === 'string' ? x.thumbnailUri : undefined,
+      source: typeof x.source === 'string' ? x.source : undefined,
+    });
+  }
+  return out;
+}
 
 const MAX_PAGES_PER_SPACE = 5; // 5 pages * 100 = 500 messages cap per poll per space
 const MAX_MS_PER_SPACE = 8000; // skip if listing takes longer than 8s
+
+// Fetch a single Chat message by its resource name (spaces/XXX/messages/YYY).
+// Returns null if the message is gone (deleted) or any error occurs.
+export async function getMessageById(messageName: string): Promise<ChatMessage | null> {
+  let auth;
+  try {
+    auth = await getAuthenticatedClient();
+  } catch {
+    return null;
+  }
+  const chat = google.chat({ version: 'v1', auth });
+  try {
+    const res = await chat.spaces.messages.get({ name: messageName });
+    const m = res.data;
+    if (!m.name || !m.createTime) return null;
+    const spaceName = messageName.split('/').slice(0, 2).join('/');
+    const senderId = m.sender?.name ?? '';
+    let displayName = m.sender?.displayName || senderFallback(m.sender);
+    if (senderId) {
+      const resolved = await resolveUserNames([senderId]);
+      if (resolved[senderId]) displayName = resolved[senderId];
+    }
+    return {
+      id: m.name,
+      spaceName,
+      spaceDisplayName: '',
+      senderName: senderId,
+      senderDisplayName: displayName,
+      text: m.text ?? '',
+      createTime: m.createTime,
+      threadName: m.thread?.name ?? undefined,
+      attachments: extractAttachments(m),
+    };
+  } catch (err) {
+    console.warn(`[message.get] failed for ${messageName}:`, (err as Error).message);
+    return null;
+  }
+}
+
+// Returns up to `limit` messages from the space created strictly before `beforeIso`,
+// in ascending chronological order. Used to surround a target message with context.
+// Returns [] silently on any error so a context fetch never blocks the main flow.
+export async function getContextBefore(
+  spaceName: string,
+  beforeIso: string,
+  limit: number,
+): Promise<ChatMessage[]> {
+  let auth;
+  try {
+    auth = await getAuthenticatedClient();
+  } catch {
+    return [];
+  }
+  const chat = google.chat({ version: 'v1', auth });
+
+  try {
+    const res = await chat.spaces.messages.list({
+      parent: spaceName,
+      pageSize: Math.min(limit, 50),
+      filter: `createTime < "${beforeIso}"`,
+      orderBy: 'createTime desc',
+    });
+    const raw = (res.data.messages ?? []).slice(0, limit);
+
+    const senderIds = new Set<string>();
+    for (const m of raw) if (m.sender?.name) senderIds.add(m.sender.name);
+    const resolved = senderIds.size > 0 ? await resolveUserNames([...senderIds]) : {};
+
+    return raw.reverse().map(m => ({
+      id: m.name ?? '',
+      spaceName,
+      spaceDisplayName: '',
+      senderName: m.sender?.name ?? '',
+      senderDisplayName:
+        resolved[m.sender?.name ?? ''] || m.sender?.displayName || senderFallback(m.sender),
+      text: m.text ?? '',
+      createTime: m.createTime ?? '',
+      threadName: m.thread?.name ?? undefined,
+    }));
+  } catch (err) {
+    console.warn(`[context] failed for ${spaceName}:`, (err as Error).message);
+    return [];
+  }
+}
 
 // Per-space last-read timestamps (ISO) from Google Chat's spaceReadState.
 // Returns {} if the scope was not granted yet — caller should treat as "no sync available".
@@ -394,6 +507,7 @@ export async function listMessagesSince(
         text: m.text ?? '',
         createTime: m.createTime,
         threadName: m.thread?.name ?? undefined,
+        attachments: extractAttachments(m),
       });
     }
     pageToken = res.data.nextPageToken ?? undefined;

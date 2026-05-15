@@ -33,8 +33,8 @@ body {
            focus:outline-none focus:ring-2 focus:ring-terracota-200 focus:border-terracota-400;
   }
   .btn-primary {
-    @apply px-3 py-2 rounded-md bg-ink hover:bg-ink/90 text-paper text-sm font-medium
-           transition-colors;
+    @apply px-3 py-2 rounded-md bg-iris hover:bg-iris-600 text-paper text-sm font-medium
+           transition-colors shadow-sm;
   }
   .btn-accent {
     @apply px-3 py-2 rounded-md bg-terracota hover:bg-terracota-600 text-ink text-sm font-semibold

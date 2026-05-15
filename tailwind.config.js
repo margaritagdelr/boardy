@@ -40,6 +40,18 @@ export default {
           100: '#F5ECD6',
           700: '#8C6E2D',
         },
+        iris: {
+          DEFAULT: '#6D5CFF',
+          50:  '#F2EFFF',
+          100: '#E4DFFF',
+          200: '#CAC1FF',
+          300: '#AB9EFF',
+          400: '#8A78FF',
+          500: '#6D5CFF',
+          600: '#5742E8',
+          700: '#4530C0',
+          800: '#352497',
+        },
       },
       fontFamily: {
         sans: ['"Inter Tight"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],

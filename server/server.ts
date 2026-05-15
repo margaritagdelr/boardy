@@ -13,7 +13,9 @@ import {
   hasToken,
 } from './google.js';
 import {
+  consolidateAutoTodos,
   dismissItem,
+  enrichExistingAutoTodos,
   markStatus,
   pollNow,
   pruneInboxBySettings,
@@ -25,6 +27,9 @@ import {
   type Settings,
 } from './inbox.js';
 import { readRules, writeRules, type RulesData } from './rules.js';
+import { getOrGenerateBriefing } from './briefing.js';
+import { deleteDocument, ingestMessages as ingestDocuments, readDocuments } from './documents.js';
+import type { ChatMessage } from './google.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -135,9 +140,76 @@ app.delete('/api/inbox/:id', async (req, res) => {
   res.json(state);
 });
 
+app.get('/api/briefing', async (_req, res) => {
+  try {
+    const b = await getOrGenerateBriefing(false);
+    res.json(b);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post('/api/briefing/regenerate', async (_req, res) => {
+  try {
+    const b = await getOrGenerateBriefing(true);
+    res.json(b);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post('/api/todos/consolidate', async (_req, res) => {
+  try {
+    const result = await consolidateAutoTodos();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post('/api/todos/enrich-context', async (_req, res) => {
+  try {
+    const result = await enrichExistingAutoTodos();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 app.post('/api/inbox/:id/status', async (req, res) => {
   const { status } = req.body as { status: 'nuevo' | 'descartado' };
   const state = await markStatus(req.params.id, status);
+  res.json(state);
+});
+
+app.get('/api/documents', async (_req, res) => {
+  res.json(await readDocuments());
+});
+
+// Backfill: re-extract documents from current inbox items (URLs only — attachments need a fresh poll).
+app.post('/api/documents/backfill', async (_req, res) => {
+  try {
+    const inbox = await readInbox();
+    const messages: ChatMessage[] = inbox.items.map(i => ({
+      id: i.id,
+      spaceName: i.spaceName,
+      spaceDisplayName: i.spaceDisplayName,
+      senderName: i.senderName,
+      senderDisplayName: i.senderDisplayName,
+      text: i.text,
+      createTime: i.createTime,
+      threadName: i.threadName,
+    }));
+    const added = await ingestDocuments(messages);
+    const state = await readDocuments();
+    res.json({ added, total: state.documents.length });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.delete('/api/documents/:id', async (req, res) => {
+  const state = await deleteDocument(req.params.id);
   res.json(state);
 });
 

@@ -26,9 +26,11 @@
       "enabled": true,
       "matchAny": [
         "necesito que",
-        "necesitamos",
-        "podés",
-        "podes",
+        "necesitamos que",
+        "voy a necesitar",
+        "vamos a necesitar",
+        "me podés",
+        "me podes",
         "podrías",
         "podrias",
         "hay que",
@@ -36,13 +38,15 @@
         "habria que",
         "tenés que",
         "tenes que",
+        "tenemos que",
         "me ayudás",
         "me ayudas",
+        "me ayudarías",
+        "me ayudarias",
+        "te pido",
+        "te pedimos",
         "pedido",
-        "me podés",
-        "me podes",
-        "hacé",
-        "hace"
+        "por favor"
       ]
     },
     {

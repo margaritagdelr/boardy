@@ -1,8 +1,10 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getEnrichedSpaces, getMyUserId, getSpaceReadStates, listMessagesSince, resolveUserNames, type ChatMessage } from './google.js';
+import { getContextBefore, getEnrichedSpaces, getMessageById, getMyUserId, getSpaceReadStates, listMessagesSince, resolveUserNames, type ChatMessage } from './google.js';
+import { summarizeConversation, type SummaryMessage } from './gemini.js';
 import { applyRules, readRules } from './rules.js';
+import { ingestMessages as ingestDocuments, pruneDocumentsByMonitoredSpaces } from './documents.js';
 
 const AUTO_TASK_LABEL = 'nueva tarea';
 
@@ -16,6 +18,7 @@ type AutoTodo = {
   createdAt: string;
   dueDate: string;
   sourceInboxId?: string;
+  sourceInboxIds?: string[];
 };
 
 type TodosFile = { todos: AutoTodo[] };
@@ -99,7 +102,9 @@ export async function retagAllItems(): Promise<InboxState> {
 export async function pruneInboxBySettings(): Promise<InboxState> {
   const state = await readInbox();
   const settings = await readSettings();
-  if (settings.monitorAllSpaces) return state; // nothing to prune
+  // Also prune documents to match the same monitored-space scope.
+  await pruneDocumentsByMonitoredSpaces(new Set(settings.monitoredSpaces), settings.monitorAllSpaces);
+  if (settings.monitorAllSpaces) return state; // nothing to prune in inbox
   const monitored = new Set(settings.monitoredSpaces);
   const before = state.items.length;
   state.items = state.items.filter(i => monitored.has(i.spaceName));
@@ -205,6 +210,23 @@ export async function pollNow(): Promise<{ newCount: number; checkedSpaces: numb
     if (maxTime) state.perSpaceLastSeen[space.name] = maxTime;
   });
 
+  // Extract documents (Drive, PDFs, Zoho, Slides, links) from the new messages.
+  if (freshItems.length > 0) {
+    await ingestDocuments(freshItems);
+  }
+
+  // Auto-convert messages tagged "nueva tarea" into pending todos.
+  // Runs BEFORE the read-state filter so a message you already opened in Chat
+  // (but haven't actually done) still becomes a pending todo.
+  const toConvert = freshItems.filter(i => (i.tags ?? []).includes(AUTO_TASK_LABEL));
+  const autoTodos = await autoConvertToTodos(toConvert);
+  if (autoTodos > 0) {
+    const convertedIds = new Set(toConvert.map(i => i.id));
+    state.items = state.items.map(i =>
+      convertedIds.has(i.id) ? { ...i, status: 'descartado' as const } : i,
+    );
+  }
+
   // Sync with Google Chat read-state: drop items already read in Chat.
   // Silently degrades if the scope isn't granted (returns {}).
   const readStates = await getSpaceReadStates(target.map(s => s.name));
@@ -217,18 +239,6 @@ export async function pollNow(): Promise<{ newCount: number; checkedSpaces: numb
     if (state.items.length !== before) {
       console.log(`[inbox] dropped ${before - state.items.length} item(s) already read in Chat`);
     }
-  }
-
-  // Auto-convert messages tagged "nueva tarea" into pending todos.
-  // Only items that survived the read-state filter become todos.
-  const survivingIds = new Set(state.items.map(i => i.id));
-  const toConvert = freshItems.filter(i => survivingIds.has(i.id) && (i.tags ?? []).includes(AUTO_TASK_LABEL));
-  const autoTodos = await autoConvertToTodos(toConvert);
-  if (autoTodos > 0) {
-    const convertedIds = new Set(toConvert.map(i => i.id));
-    state.items = state.items.map(i =>
-      convertedIds.has(i.id) ? { ...i, status: 'descartado' as const } : i,
-    );
   }
 
   state.lastPolledAt = new Date().toISOString();
@@ -251,30 +261,350 @@ async function writeTodosFile(data: TodosFile): Promise<void> {
   await fs.writeFile(TODOS_PATH, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 
+const CONTEXT_MESSAGES = 5;
+const CONTEXT_TEXT_LIMIT = 240;
+const CONTEXT_DIVIDER = '— Contexto previo —';
+const MESSAGES_DIVIDER = '— Mensajes —';
+const SUMMARY_DIVIDER = '— Resumen —';
+
+function toSummaryMessage(m: { senderName: string; senderDisplayName: string; text: string; createTime: string }, myId: string | null): SummaryMessage {
+  return {
+    senderDisplayName: m.senderDisplayName,
+    text: m.text,
+    createTime: m.createTime,
+    isMe: !!myId && m.senderName === myId,
+  };
+}
+
+function collectSourceIds(todo: AutoTodo): string[] {
+  if (todo.sourceInboxIds && todo.sourceInboxIds.length > 0) return todo.sourceInboxIds;
+  if (todo.sourceInboxId) return [todo.sourceInboxId];
+  return [];
+}
+
+function spaceFromMessageId(messageId: string): string {
+  return messageId.split('/').slice(0, 2).join('/');
+}
+
 async function autoConvertToTodos(items: InboxItem[]): Promise<number> {
   if (items.length === 0) return 0;
   const file = await readTodosFile();
-  const alreadyConverted = new Set(file.todos.map(t => t.sourceInboxId).filter(Boolean));
-  const today = new Date().toISOString().slice(0, 10);
-  let added = 0;
-  for (const item of items) {
-    if (alreadyConverted.has(item.id)) continue;
-    const title = item.text.split('\n')[0].slice(0, 100) || `Mensaje de ${item.senderDisplayName}`;
-    file.todos.push({
-      id: `todo-${Math.random().toString(36).slice(2, 9)}`,
-      title,
-      priority: 'media',
-      status: 'pendiente',
-      tags: ['chat', 'auto'],
-      notes: `De ${item.senderDisplayName} en ${item.spaceDisplayName}:\n\n${item.text}`,
-      createdAt: today,
-      dueDate: '',
-      sourceInboxId: item.id,
-    });
-    added++;
+
+  // Dedup set: any source ID across both legacy and new fields.
+  const alreadyConverted = new Set<string>();
+  for (const t of file.todos) {
+    for (const id of collectSourceIds(t)) alreadyConverted.add(id);
   }
-  if (added > 0) await writeTodosFile(file);
-  return added;
+  const fresh = items.filter(i => !alreadyConverted.has(i.id));
+  if (fresh.length === 0) return 0;
+
+  const myId = await getMyUserId();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Group fresh items by space — same space = same conversation.
+  const bySpace = new Map<string, InboxItem[]>();
+  for (const i of fresh) {
+    const list = bySpace.get(i.spaceName) ?? [];
+    list.push(i);
+    bySpace.set(i.spaceName, list);
+  }
+
+  let changed = 0;
+
+  for (const [spaceName, group] of bySpace) {
+    group.sort((a, b) => a.createTime.localeCompare(b.createTime));
+
+    // If there's already an open auto-todo from today for this space, append.
+    const existing = findMergeTarget(file.todos, spaceName, today);
+
+    if (existing) {
+      const existingIds = collectSourceIds(existing);
+      existing.sourceInboxIds = [...existingIds, ...group.map(i => i.id)];
+      delete existing.sourceInboxId; // migrate legacy single field
+      // Refetch all source messages so we can regenerate summary + log cleanly.
+      const allMessages = await Promise.all(
+        existing.sourceInboxIds.map(id => getMessageById(id)),
+      );
+      const allValid = allMessages.filter((m): m is ChatMessage => m !== null);
+      allValid.sort((a, b) => a.createTime.localeCompare(b.createTime));
+      const groupItems = allValid.map(m => ({
+        ...m,
+        spaceDisplayName: group[0].spaceDisplayName,
+        receivedAt: '',
+        status: 'descartado' as const,
+      })) as InboxItem[];
+      const ctxRaw = await getContextBefore(spaceName, allValid[0]?.createTime ?? group[0].createTime, CONTEXT_MESSAGES + groupItems.length);
+      const cleanCtx = ctxRaw
+        .filter(m => !existing.sourceInboxIds!.includes(m.id))
+        .slice(-CONTEXT_MESSAGES);
+      const result = await summarizeConversation({
+        spaceDisplayName: group[0].spaceDisplayName,
+        context: cleanCtx.map(m => toSummaryMessage(m, myId)),
+        messages: groupItems.map(m => toSummaryMessage(m, myId)),
+        todayIso: today,
+      });
+      existing.notes = buildBundledNotes(groupItems, cleanCtx, myId, result.summary);
+      // Only set dueDate if the todo doesn't already have one (don't overwrite user edits).
+      if (result.dueDate && !existing.dueDate) existing.dueDate = result.dueDate;
+      changed++;
+    } else {
+      const first = group[0];
+      const context = await getContextBefore(spaceName, first.createTime, CONTEXT_MESSAGES);
+      const result = await summarizeConversation({
+        spaceDisplayName: first.spaceDisplayName,
+        context: context.map(m => toSummaryMessage(m, myId)),
+        messages: group.map(m => toSummaryMessage(m, myId)),
+        todayIso: today,
+      });
+      file.todos.push({
+        id: `todo-${Math.random().toString(36).slice(2, 9)}`,
+        title: buildBundledTitle(group),
+        priority: 'media',
+        status: 'pendiente',
+        tags: ['chat', 'auto'],
+        notes: buildBundledNotes(group, context, myId, result.summary),
+        createdAt: today,
+        dueDate: result.dueDate ?? '',
+        sourceInboxIds: group.map(i => i.id),
+      });
+      changed++;
+    }
+  }
+
+  if (changed > 0) await writeTodosFile(file);
+  return changed;
+}
+
+function findMergeTarget(todos: AutoTodo[], spaceName: string, today: string): AutoTodo | undefined {
+  for (const t of todos) {
+    if (t.status === 'hecho') continue;
+    if (t.createdAt !== today) continue;
+    const ids = collectSourceIds(t);
+    if (ids.length === 0) continue;
+    if (spaceFromMessageId(ids[0]) === spaceName) return t;
+  }
+  return undefined;
+}
+
+function buildBundledTitle(group: InboxItem[]): string {
+  const first = group[0];
+  const firstLine = first.text.split('\n')[0].trim();
+  const base = firstLine.slice(0, 90) || `Conversación con ${first.senderDisplayName}`;
+  return group.length > 1 ? `${base} (+${group.length - 1})` : base;
+}
+
+function buildBundledNotes(group: InboxItem[], context: ChatMessage[], myId: string | null, summary?: string | null): string {
+  const first = group[0];
+  const lines: string[] = [];
+  lines.push(`Conversación en ${first.spaceDisplayName}:`);
+
+  if (summary && summary.trim() && summary.trim() !== '(sin tarea clara)') {
+    lines.push('');
+    lines.push(SUMMARY_DIVIDER);
+    lines.push(summary.trim());
+  }
+
+  if (context.length > 0) {
+    lines.push('');
+    lines.push(CONTEXT_DIVIDER);
+    for (const m of context) {
+      lines.push(formatMessageLine(m, myId));
+    }
+  }
+
+  lines.push('');
+  lines.push(MESSAGES_DIVIDER);
+  for (const item of group) {
+    lines.push(formatMessageLine(item, myId));
+  }
+  return lines.join('\n');
+}
+
+function formatMessageLine(m: { senderName: string; senderDisplayName: string; text: string; createTime: string }, myId: string | null): string {
+  const sender = myId && m.senderName === myId ? 'Vos' : m.senderDisplayName;
+  const time = formatTime(m.createTime);
+  const text = m.text.replace(/\s+/g, ' ').trim();
+  const truncated = text.length > CONTEXT_TEXT_LIMIT ? text.slice(0, CONTEXT_TEXT_LIMIT) + '…' : text;
+  return `[${sender}${time ? ', ' + time : ''}] ${truncated || '(sin texto)'}`;
+}
+
+function formatTime(iso: string): string {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  } catch {
+    return '';
+  }
+}
+
+// Consolidates auto-todos that belong to the same space + day into a single bundled todo.
+// Also regenerates summaries for single auto-todos that don't have one yet.
+// Refetches source messages from Chat to rebuild the notes cleanly. Idempotent.
+export async function consolidateAutoTodos(): Promise<{ merged: number; removed: number; groupsProcessed: number; summarized: number }> {
+  const file = await readTodosFile();
+  const myId = await getMyUserId();
+
+  // Group auto-todos (those with any source ID) by spaceName + createdAt.
+  const groups = new Map<string, AutoTodo[]>();
+  for (const t of file.todos) {
+    const ids = collectSourceIds(t);
+    if (ids.length === 0) continue;
+    const space = spaceFromMessageId(ids[0]);
+    const key = `${space}|${t.createdAt}`;
+    const list = groups.get(key) ?? [];
+    list.push(t);
+    groups.set(key, list);
+  }
+
+  let merged = 0;
+  let removed = 0;
+  let groupsProcessed = 0;
+  let summarized = 0;
+
+  for (const [, todosInGroup] of groups) {
+    const needsMerge = todosInGroup.length >= 2;
+    const needsSummary = !todosInGroup[0].notes.includes(SUMMARY_DIVIDER);
+    if (!needsMerge && !needsSummary) continue;
+    groupsProcessed++;
+
+    // Collect all source IDs across this group.
+    const allSourceIds = Array.from(
+      new Set(todosInGroup.flatMap(t => collectSourceIds(t))),
+    );
+
+    // Refetch each source message in parallel.
+    const fetched = await Promise.all(allSourceIds.map(id => getMessageById(id)));
+    const messages = fetched.filter((m): m is ChatMessage => m !== null);
+    if (messages.length === 0) continue;
+    messages.sort((a, b) => a.createTime.localeCompare(b.createTime));
+
+    // Use the first todo as the target (preserve its id, status, priority, dueDate, etc.).
+    const target = todosInGroup[0];
+    const space = spaceFromMessageId(allSourceIds[0]);
+    const spaceDisplayName = inferSpaceDisplayName(target, messages);
+    const context = await getContextBefore(space, messages[0].createTime, CONTEXT_MESSAGES + messages.length);
+    const cleanContext = context
+      .filter(m => !allSourceIds.includes(m.id))
+      .slice(-CONTEXT_MESSAGES);
+
+    // Build a group-like array of "InboxItem-ish" entries for the bundled formatter.
+    const groupItems = messages.map(m => ({
+      ...m,
+      spaceDisplayName,
+      receivedAt: '',
+      status: 'descartado' as const,
+    })) as InboxItem[];
+
+    const today = new Date().toISOString().slice(0, 10);
+    const result = await summarizeConversation({
+      spaceDisplayName,
+      context: cleanContext.map(m => toSummaryMessage(m, myId)),
+      messages: groupItems.map(m => toSummaryMessage(m, myId)),
+      todayIso: today,
+    });
+
+    target.title = buildBundledTitle(groupItems);
+    target.notes = buildBundledNotes(groupItems, cleanContext, myId, result.summary);
+    target.sourceInboxIds = allSourceIds;
+    delete target.sourceInboxId;
+    if (result.dueDate && !target.dueDate) target.dueDate = result.dueDate;
+    if (needsMerge) merged++;
+    if (result.summary) summarized++;
+
+    // Drop the rest of the todos in this group.
+    for (let i = 1; i < todosInGroup.length; i++) {
+      const idx = file.todos.indexOf(todosInGroup[i]);
+      if (idx >= 0) {
+        file.todos.splice(idx, 1);
+        removed++;
+      }
+    }
+  }
+
+  if (merged > 0 || removed > 0 || summarized > 0) await writeTodosFile(file);
+  return { merged, removed, groupsProcessed, summarized };
+}
+
+function inferSpaceDisplayName(target: AutoTodo, _messages: ChatMessage[]): string {
+  // Try to extract from existing notes header — fallback to the space resource id.
+  const headerMatch = target.notes.match(/^(?:De [^\n]+ en|Conversación en) ([^:\n]+):/);
+  if (headerMatch) return headerMatch[1].trim();
+  const ids = collectSourceIds(target);
+  return ids[0] ? spaceFromMessageId(ids[0]) : '(space desconocido)';
+}
+
+export async function enrichExistingAutoTodos(): Promise<{ enriched: number; skipped: number }> {
+  const file = await readTodosFile();
+  const myId = await getMyUserId();
+  let enriched = 0;
+  let skipped = 0;
+
+  const targets = file.todos.filter(
+    t => t.sourceInboxId && !t.notes.includes('— Contexto previo —'),
+  );
+
+  if (targets.length === 0) return { enriched: 0, skipped: 0 };
+
+  const beforeIso = new Date().toISOString();
+  const enrichments = await Promise.all(
+    targets.map(async t => {
+      const spaceName = t.sourceInboxId!.split('/').slice(0, 2).join('/'); // "spaces/XXX"
+      const ctx = await getContextBefore(spaceName, beforeIso, CONTEXT_MESSAGES + 1);
+      // Drop the target message itself from context if it's in there.
+      const filtered = ctx.filter(m => m.id !== t.sourceInboxId).slice(-CONTEXT_MESSAGES);
+      return { todoId: t.id, context: filtered };
+    }),
+  );
+
+  for (const { todoId, context } of enrichments) {
+    if (context.length === 0) {
+      skipped++;
+      continue;
+    }
+    const todo = file.todos.find(t => t.id === todoId)!;
+    // Reconstruct: original notes already have "De {sender} en {space}:\n\n{text}"
+    // We rebuild by parsing the original sender/space line and the message text.
+    const original = todo.notes;
+    const headerMatch = original.match(/^De ([^\n]+) en ([^:\n]+):\n\n([\s\S]*)$/);
+    if (!headerMatch) {
+      skipped++;
+      continue;
+    }
+    const [, senderName, spaceDisplayName, text] = headerMatch;
+    todo.notes = buildNotesWithContextRaw({
+      senderDisplayName: senderName,
+      spaceDisplayName,
+      text,
+    }, context, myId);
+    enriched++;
+  }
+
+  if (enriched > 0) await writeTodosFile(file);
+  return { enriched, skipped };
+}
+
+function buildNotesWithContextRaw(
+  item: { senderDisplayName: string; spaceDisplayName: string; text: string },
+  context: ChatMessage[],
+  myId: string | null,
+): string {
+  const lines: string[] = [];
+  lines.push(`De ${item.senderDisplayName} en ${item.spaceDisplayName}:`);
+  if (context.length > 0) {
+    lines.push('');
+    lines.push('— Contexto previo —');
+    for (const m of context) {
+      const sender = myId && m.senderName === myId ? 'Vos' : m.senderDisplayName;
+      const text = m.text.replace(/\s+/g, ' ').trim();
+      const truncated = text.length > CONTEXT_TEXT_LIMIT ? text.slice(0, CONTEXT_TEXT_LIMIT) + '…' : text;
+      lines.push(`[${sender}] ${truncated || '(sin texto)'}`);
+    }
+    lines.push('— Mensaje —');
+  } else {
+    lines.push('');
+  }
+  lines.push(item.text);
+  return lines.join('\n');
 }
 
 function needsResolve(displayName: string | undefined): boolean {

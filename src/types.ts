@@ -41,6 +41,7 @@ export type Todo = {
   notes: string;
   createdAt: string;
   dueDate: string;
+  accountId?: string;
 };
 
 export type TodosData = {
@@ -99,4 +100,34 @@ export type Settings = {
   pollingIntervalMinutes: number;
   monitoredSpaces: string[];
   monitorAllSpaces: boolean;
+};
+
+export type DocKind =
+  | 'drive-doc'
+  | 'drive-sheet'
+  | 'drive-slide'
+  | 'drive-folder'
+  | 'drive-file'
+  | 'pdf'
+  | 'zoho'
+  | 'figma'
+  | 'link';
+
+export type Document = {
+  id: string;
+  kind: DocKind;
+  url: string;
+  title: string;
+  mimeType?: string;
+  sourceMessageId: string;
+  spaceName: string;
+  spaceDisplayName: string;
+  senderName: string;
+  senderDisplayName: string;
+  createTime: string;
+  capturedAt: string;
+};
+
+export type DocumentsState = {
+  documents: Document[];
 };

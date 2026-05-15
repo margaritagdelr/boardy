@@ -15,6 +15,9 @@ export default function Inbox({ onCountChange }: { onCountChange?: (n: number) =
   const [showSettings, setShowSettings] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [rulesByLabel, setRulesByLabel] = useState<Record<string, Rule>>({});
+  const [sortMode, setSortMode] = useState<'recientes' | 'antiguos' | 'conversacion'>('recientes');
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadRules = useCallback(async () => {
     const d = await fetch('/api/rules').then(r => r.json() as Promise<RulesData>);
@@ -147,9 +150,32 @@ export default function Inbox({ onCountChange }: { onCountChange?: (n: number) =
     );
   }
 
-  const newItems = (state?.items ?? []).filter(i => i.status === 'nuevo').sort((a, b) =>
-    a.createTime < b.createTime ? 1 : -1,
+  const allNew = (state?.items ?? []).filter(i => i.status === 'nuevo');
+
+  const tagCounts = new Map<string, number>();
+  for (const i of allNew) {
+    for (const t of i.tags ?? []) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  }
+
+  const filteredItems = allNew.filter(i => {
+    if (activeTags.size > 0) {
+      if (!(i.tags ?? []).some(t => activeTags.has(t))) return false;
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      const hay = `${i.senderDisplayName} ${i.spaceDisplayName} ${i.text}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const newItems = [...filteredItems].sort((a, b) =>
+    sortMode === 'antiguos'
+      ? a.createTime > b.createTime ? 1 : -1
+      : a.createTime < b.createTime ? 1 : -1,
   );
+
+  const groupedItems = sortMode === 'conversacion' ? groupByConversation(filteredItems) : null;
 
   return (
     <>
@@ -189,52 +215,116 @@ export default function Inbox({ onCountChange }: { onCountChange?: (n: number) =
         </div>
       )}
 
-      {newItems.length === 0 ? (
+      {allNew.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" />
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar por persona, conversación o texto…"
+                className="input pl-9 text-sm"
+              />
+            </div>
+            <select
+              value={sortMode}
+              onChange={e => setSortMode(e.target.value as 'recientes' | 'antiguos' | 'conversacion')}
+              className="select w-auto text-sm"
+              title="Ordenar"
+            >
+              <option value="recientes">Más recientes</option>
+              <option value="antiguos">Más antiguos</option>
+              <option value="conversacion">Por conversación</option>
+            </select>
+          </div>
+
+          {tagCounts.size > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setActiveTags(new Set())}
+                className={[
+                  'inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium transition',
+                  activeTags.size === 0
+                    ? 'bg-ink text-paper'
+                    : 'bg-paper border border-ink-mute text-ink/70 hover:bg-cream',
+                ].join(' ')}
+              >
+                Todos <span className="opacity-60 ml-1">({allNew.length})</span>
+              </button>
+              {[...tagCounts.entries()].sort((a, b) => b[1] - a[1]).map(([tag, count]) => {
+                const active = activeTags.has(tag);
+                const ruleColor = rulesByLabel[tag]?.color ?? 'sage';
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => {
+                      const next = new Set(activeTags);
+                      if (active) next.delete(tag); else next.add(tag);
+                      setActiveTags(next);
+                    }}
+                    className={[
+                      'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition border',
+                      active
+                        ? `${TAG_COLOR_STYLES[ruleColor]} border-transparent ring-1 ring-ink/30`
+                        : 'bg-paper border-ink-mute text-ink/70 hover:bg-cream',
+                    ].join(' ')}
+                  >
+                    <Tag size={10} className="opacity-70" />
+                    {tag} <span className="opacity-60">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {allNew.length === 0 ? (
         <div className="text-center py-16 text-ink/40">
           <CheckCircle2 size={32} className="mx-auto mb-2 text-terracota-400" />
           <p className="italic">No hay mensajes nuevos para procesar.</p>
           <p className="text-xs mt-1">Boardy revisa cada {state ? 'el intervalo configurado' : '...'} cuando está corriendo.</p>
         </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="text-center py-12 text-ink/40 italic">
+          Ningún mensaje matchea los filtros activos.
+        </div>
+      ) : groupedItems ? (
+        <div className="space-y-5">
+          {groupedItems.map(group => (
+            <section key={group.spaceName}>
+              <header className="flex items-center justify-between mb-2 px-1">
+                <h3 className="text-xs font-semibold text-ink/70 uppercase tracking-wide mono flex items-center gap-2">
+                  <span>{group.spaceDisplayName || '(sin nombre)'}</span>
+                  <span className="text-ink/40 font-normal normal-case">·</span>
+                  <span className="text-ink/40 font-normal normal-case">{group.items.length}</span>
+                </h3>
+              </header>
+              <ul className="space-y-2">
+                {group.items.map(item => (
+                  <InboxItemRow
+                    key={item.id}
+                    item={item}
+                    rulesByLabel={rulesByLabel}
+                    onConvert={() => startConvert(item)}
+                    onDismiss={() => dismiss(item.id)}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       ) : (
         <ul className="space-y-2">
           {newItems.map(item => (
-            <li key={item.id} className="bg-paper border border-ink-mute rounded-lg p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 text-xs text-ink-soft mb-1 flex-wrap">
-                    <span className="font-semibold text-ink">{item.senderDisplayName}</span>
-                    <span className="text-ink/30">·</span>
-                    <span>{item.spaceDisplayName}</span>
-                    <span className="text-ink/30">·</span>
-                    <span className="mono text-[10px]">{formatRelative(item.createTime)}</span>
-                  </div>
-                  <div className="text-sm text-ink/85 whitespace-pre-wrap line-clamp-6">{item.text || <em className="text-ink/40">(sin texto — quizá un archivo o tarjeta)</em>}</div>
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {item.tags.map(t => (
-                        <TagPill key={t} label={t} color={rulesByLabel[t]?.color ?? 'sage'} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => startConvert(item)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-terracota hover:bg-terracota-600 text-ink text-xs font-semibold"
-                    title="Convertir a pendiente"
-                  >
-                    <Plus size={14} /> Pendiente
-                  </button>
-                  <button
-                    onClick={() => dismiss(item.id)}
-                    className="p-1.5 rounded hover:bg-terracota-100 text-ink/40 hover:text-terracota-700"
-                    title="Descartar"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            </li>
+            <InboxItemRow
+              key={item.id}
+              item={item}
+              rulesByLabel={rulesByLabel}
+              onConvert={() => startConvert(item)}
+              onDismiss={() => dismiss(item.id)}
+            />
           ))}
         </ul>
       )}
@@ -717,6 +807,83 @@ const COLOR_SWATCH: Record<RuleColor, string> = {
   sage: 'bg-sage',
   ink: 'bg-ink',
 };
+
+function InboxItemRow({
+  item,
+  rulesByLabel,
+  onConvert,
+  onDismiss,
+}: {
+  item: InboxItem;
+  rulesByLabel: Record<string, Rule>;
+  onConvert: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <li className="bg-paper border border-ink-mute rounded-lg p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-xs text-ink-soft mb-1 flex-wrap">
+            <span className="font-semibold text-ink">{item.senderDisplayName}</span>
+            <span className="text-ink/30">·</span>
+            <span>{item.spaceDisplayName}</span>
+            <span className="text-ink/30">·</span>
+            <span className="mono text-[10px]">{formatRelative(item.createTime)}</span>
+          </div>
+          <div className="text-sm text-ink/85 whitespace-pre-wrap line-clamp-6">
+            {item.text || <em className="text-ink/40">(sin texto — quizá un archivo o tarjeta)</em>}
+          </div>
+          {item.tags && item.tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {item.tags.map(t => (
+                <TagPill key={t} label={t} color={rulesByLabel[t]?.color ?? 'sage'} />
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={onConvert}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-terracota hover:bg-terracota-600 text-ink text-xs font-semibold"
+            title="Convertir a pendiente"
+          >
+            <Plus size={14} /> Pendiente
+          </button>
+          <button
+            onClick={onDismiss}
+            className="p-1.5 rounded hover:bg-terracota-100 text-ink/40 hover:text-terracota-700"
+            title="Descartar"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+type ConversationGroup = {
+  spaceName: string;
+  spaceDisplayName: string;
+  items: InboxItem[];
+};
+
+function groupByConversation(items: InboxItem[]): ConversationGroup[] {
+  const groups = new Map<string, InboxItem[]>();
+  for (const i of items) {
+    const arr = groups.get(i.spaceName) ?? [];
+    arr.push(i);
+    groups.set(i.spaceName, arr);
+  }
+  const out: ConversationGroup[] = [];
+  for (const [spaceName, list] of groups) {
+    list.sort((a, b) => (a.createTime < b.createTime ? 1 : -1));
+    out.push({ spaceName, spaceDisplayName: list[0].spaceDisplayName, items: list });
+  }
+  // Sort groups by most-recent message desc
+  out.sort((a, b) => (a.items[0].createTime < b.items[0].createTime ? 1 : -1));
+  return out;
+}
 
 function formatRelative(iso: string): string {
   const date = new Date(iso);

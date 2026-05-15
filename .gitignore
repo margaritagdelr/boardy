@@ -11,4 +11,5 @@ dist
 
 # Local-only inbox state (Google Chat messages — privadas)
 data/inbox.json
+data/documents.json
 
